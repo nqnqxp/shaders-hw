@@ -2,15 +2,29 @@ using UnityEngine;
 
 public class playerPos : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public Material shader1Material;
+    public Material shader2Material;
+    public GameObject sphere;
+    public float distortRadius = 2f;
+    public float interactionRadius = 2f;
+    public float scallopBoost = 0.05f;
 
-    // Update is called once per frame
     void Update()
     {
-        
+        if (sphere != null)
+        {
+            if (shader1Material != null)
+            {
+                shader1Material.SetVector("_SpherePos", sphere.transform.position);
+                shader1Material.SetFloat("_DistortRadius", distortRadius);
+            }
+            
+            if (shader2Material != null)
+            {
+                shader2Material.SetVector("_SpherePos", sphere.transform.position);
+                shader2Material.SetFloat("_InteractionRadius", interactionRadius);
+                shader2Material.SetFloat("_BoostAmount", scallopBoost);
+            }
+        }
     }
 }
