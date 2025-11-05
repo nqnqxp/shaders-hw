@@ -2,9 +2,12 @@ Shader "Custom/vertexShader"
 {
     Properties
     {
-        _BaseColor("Base Color", Color) = (1, 1, 1, 1)
-        _WingHeight("Wing Height", Float) = 1.0
-        _FlapSpeed("Flap Speed", Float) = 1.0
+        _BaseColor("Base Color", Color) = (0.65, 0.63, 1.0)
+        _MiddleColor("Middle Color", Color) = (1.0, 0.8, 0.1)
+        _TipColor("Tip Color", Color) = (1.0, 0.3, 0.05)
+        _DistortionSize("Distortion Size", Float) = 0.23
+        _FlickerSpeed("Ficker Speed", Float) = 2.9
+        _EmissionColor("Emission Color", Color) = (1,0.5,0.1,1)
     }
     SubShader
     {
@@ -30,10 +33,14 @@ Shader "Custom/vertexShader"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/JasonNoise.hlsl"
 
             float4 _BaseColor;
-            float _WingHeight;
-            float _FlapSpeed;
+            float4 _MiddleColor;
+            float4 _TipColor;
+            float _DistortionSize;
+            float _FlickerSpeed;
+            float4 _EmissionColor;
             
             struct Attributes
             {
@@ -44,32 +51,39 @@ Shader "Custom/vertexShader"
 
             struct Varyings
             {
-                float4 positionHCS : SV_POSITION; // for rendering final fragment
+                float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                float3 worldPos : TEXCOORD1; // maybe...?
-                float3 worldNormal : TEXCOORD2; // also maybe...?
+                float3 worldPos : TEXCOORD1;
+                float3 worldNormal : TEXCOORD2;
+                float3 positionOS : TEXCOORD3;
             };
 
-            float3 ApplyWingFlap(float3 positionOS, float t)
+            float3 ApplyFlameDistortion(float3 positionOS, float t, float2 uv)
             {
-                float vertexDistance = abs(positionOS.x);
-                float3 modifiedPositionOS = positionOS.xyz + float3(0,sin(t*_FlapSpeed) * _WingHeight,0) * vertexDistance;
-                return modifiedPositionOS;
+                float vertexDistance = abs(positionOS.y);
+
+                float n = noise21(uv * 4 + float2(0, t * _FlickerSpeed)); //scrolling noise
+                float xOffset = (n - 0.5) * vertexDistance * _DistortionSize; //horizontal swaying
+                float yOffset = sin(t * _FlickerSpeed + n*6) * vertexDistance * 0.15; //vertical flicker
+
+                return positionOS + float3(xOffset, yOffset, 0);
             }
             
             Varyings vertex(Attributes IN)
             {
                 Varyings OUT = (Varyings)0;
-                IN.positionOS.xyz = ApplyWingFlap(IN.positionOS.xyz, _Time.y);
+                IN.positionOS.xyz = ApplyFlameDistortion(IN.positionOS.xyz, _Time.y, IN.uv);
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.worldPos = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.worldNormal = TransformObjectToWorldNormal(IN.normalOS);
+                OUT.positionOS = IN.positionOS;
                 OUT.uv = IN.uv;
                 return OUT;
             }
 
             half4 fragment(Varyings IN) : SV_Target
             {
+                /*
                 InputData lightData = (InputData)0;
                 lightData.positionWS = IN.worldPos;
                 lightData.normalWS = normalize(cross(ddy(lightData.positionWS), ddx(lightData.positionWS)));
@@ -77,13 +91,26 @@ Shader "Custom/vertexShader"
                 lightData.shadowCoord = TransformWorldToShadowCoord(lightData.positionWS);
                 
                 SurfaceData surfaceData = (SurfaceData)0;
-                surfaceData.albedo = _BaseColor.rgb;
-                surfaceData.alpha = 1.0;
-                surfaceData.smoothness = .5;
-                surfaceData.specular = .5;
+
+                float flameHeight = saturate(IN.positionOS.y);
+
+                float3 flameColor = lerp(lerp(_BaseColor, _MiddleColor, flameHeight*0.7), _TipColor, flameHeight);
+
+                surfaceData.albedo = flameColor;
+                surfaceData.alpha = 0.8;
+                surfaceData.smoothness = 0;
+                surfaceData.specular = 0;
+                surfaceData.emission = _EmissionColor.rgb * flameHeight * 5.0;
 
                 return UniversalFragmentBlinnPhong(lightData, surfaceData);
+                */
+                float flameHeight = saturate(IN.positionOS.y);
+                float3 flameColor = lerp(lerp(_BaseColor.rgb, _MiddleColor.rgb, flameHeight*0.8), _TipColor.rgb, flameHeight);
 
+                float3 emissionColor = _EmissionColor.rgb * flameHeight * 5.0;
+                float3 finalColor = flameColor + emissionColor;
+
+                return half4(finalColor, 1);
             }
             ENDHLSL
         }
@@ -100,10 +127,11 @@ Shader "Custom/vertexShader"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+            #include "Assets/JasonNoise.hlsl"
 
             float4 _BaseColor;
-            float _WingHeight;
-            float _FlapSpeed;
+            float _DistortionSize;
+            float _FlickerSpeed;
 
             float3 _LightDirection0; // filled by unity and this is barely documented anywhere
             float3 _LightPosition;
@@ -123,11 +151,15 @@ Shader "Custom/vertexShader"
                 float3 worldNormal : TEXCOORD2; // also maybe...?
             };
 
-            float3 ApplyWingFlap(float3 positionOS, float t)
+            float3 ApplyFlameDistortion(float3 positionOS, float t, float2 uv)
             {
-                float vertexDistance = abs(positionOS.x);
-                float3 modifiedPositionOS = positionOS.xyz + float3(0,sin(t*_FlapSpeed) * _WingHeight,0) * vertexDistance;
-                return modifiedPositionOS;
+                float vertexDistance = abs(positionOS.y);
+
+                float n = noise21(uv * 4 + float2(0, t * _FlickerSpeed)); //scrolling noise
+                float xOffset = n * vertexDistance * _DistortionSize; //horizontal swaying
+                float yOffset = sin(t * _FlickerSpeed + n*6) * vertexDistance; //vertical flicker
+
+                return positionOS + float3(xOffset, yOffset, 0);
             }
 
             float4 GetShadowPositionHClip(Attributes Input)
@@ -141,7 +173,7 @@ Shader "Custom/vertexShader"
             Varyings vertex(Attributes IN)
             {
                 Varyings OUT = (Varyings)0;
-                IN.positionOS.xyz = ApplyWingFlap(IN.positionOS.xyz, _Time.y);
+                IN.positionOS.xyz = ApplyFlameDistortion(IN.positionOS.xyz, _Time.y, IN.uv);
                 OUT.positionHCS = GetShadowPositionHClip(IN);
                 OUT.worldPos = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.worldNormal = TransformObjectToWorldNormal(IN.normalOS);

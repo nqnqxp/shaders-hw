@@ -25,9 +25,12 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _FlapSpeed: 1
-    - _WingHeight: 1
+    - _DistortionSize: 0.23
+    - _FlickerSpeed: 3.46
     m_Colors:
-    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 0.27877486, g: 0.25338197, b: 0.735849, a: 1}
+    - _EmissionColor: {r: 1, g: 0.44782615, b: 0, a: 1}
+    - _MiddleColor: {r: 1, g: 0.8, b: 0.09999997, a: 1}
+    - _TipColor: {r: 1, g: 0.2603306, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
