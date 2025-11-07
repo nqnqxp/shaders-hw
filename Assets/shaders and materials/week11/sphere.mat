@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Shader Graphs_demo
-  m_Shader: {fileID: -6465566751694194690, guid: 43874b644a38140a4a162b7d1ec4d8f4, type: 3}
+  m_Name: sphere
+  m_Shader: {fileID: -6465566751694194690, guid: 4f7980c488c3b4a7f9ed815414dc8f54, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -40,13 +40,11 @@ Material:
     m_Floats:
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _ScanFrequency: 32.3
-    - _ScanSpeed: 0.3
-    m_Colors:
-    - _Color: {r: 0.14622638, g: 0.5646986, b: 1, a: 0}
+    - _rotation: -1
+    m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
---- !u!114 &2759912913756391618
+--- !u!114 &2828521115583159139
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
